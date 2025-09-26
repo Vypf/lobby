@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://bbk0c3kx04nws"]
+
+[ext_resource type="Script" uid="uid://tkhwkqge3bwi" path="res://bootstrap.gd" id="1_svpu0"]
+[ext_resource type="Script" uid="uid://c8scq0u65cci" path="res://addons/godot_multiplayer/lobby/LobbyServer.gd" id="2_heto7"]
+
+[node name="Bootstrap" type="Node"]
+script = ExtResource("1_svpu0")
+
+[node name="LobbyServer" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_heto7")
+metadata/_custom_type_script = "uid://c8scq0u65cci"
