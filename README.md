@@ -12,13 +12,13 @@ A Godot 4.5 multiplayer lobby system with two Docker images:
 │ Game Clients │                    │ Lobby Server │                 │ Spawner API  │
 │              │                    │              │ <────────────── │              │
 └──────────────┘                    └──────────────┘    Response     └──────────────┘
-                                                                              │
-                                                                              │ Docker
-                                                                              ↓
-                                                                      ┌──────────────┐
-                                                                      │Game Container│
-                                                                      │  (game-CODE) │
-                                                                      └──────────────┘
+																			  │
+																			  │ Docker
+																			  ↓
+																	  ┌──────────────┐
+																	  │Game Container│
+																	  │  (game-CODE) │
+																	  └──────────────┘
 ```
 
 **Components:**
