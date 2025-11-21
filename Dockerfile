@@ -1,0 +1,55 @@
+# Multi-stage Dockerfile for Godot Lobby Server
+# Based on Godot 4.5-stable headless
+
+# Stage 1: Download Godot
+FROM ubuntu:22.04 AS godot-download
+
+ARG GODOT_VERSION=4.5-stable
+
+# Install wget and unzip
+RUN apt-get update && \
+    apt-get install -y wget unzip && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp
+
+RUN wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip && \
+    unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip && \
+    chmod +x Godot_v${GODOT_VERSION}_linux.x86_64
+
+# Stage 2: Runtime image
+FROM ubuntu:22.04
+
+# Install minimal runtime dependencies for Godot headless
+# Only the essentials needed for a server without graphics/audio
+RUN apt-get update && \
+    apt-get install -y \
+    libstdc++6 \
+    ca-certificates \
+    libfontconfig1 \
+    libfreetype6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Godot executable from download stage
+COPY --from=godot-download /tmp/Godot_v4.5-stable_linux.x86_64 /usr/local/bin/godot
+
+# Set working directory
+WORKDIR /app
+
+# Copy game files (including .godot/ for uid_cache.bin)
+COPY --chown=root:root . /app/
+
+# Remove directories that shouldn't be in the image
+RUN rm -rf /app/executables /app/logs /app/.git
+
+# Create logs directory for runtime
+RUN mkdir -p /app/logs
+
+# Expose default lobby server port
+EXPOSE 17018
+
+# Entrypoint runs Godot in headless mode with the lobby project
+ENTRYPOINT ["/usr/local/bin/godot", "--headless", "--path", "/app"]
+
+# Default arguments (can be overridden)
+CMD ["environment=production", "log_folder=/app/logs", "port=17018"]

@@ -1,0 +1,49 @@
+# Godot cache and build artifacts
+.import/
+.mono/
+
+# Git (keep .git to include submodules, will be removed in Dockerfile)
+.gitignore
+.gitattributes
+
+# Executables and builds
+executables/
+*.exe
+*.dmg
+*.app
+
+# Logs
+logs/
+*.log
+
+# Documentation and project files
+*.md
+LICENSE
+.editorconfig
+
+# Development tools
+.vscode/
+.idea/
+*.code-workspace
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# CI/CD
+.github/
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Godot exports and credentials
+export.cfg
+export_credentials.cfg
+export_presets.cfg
+*.translation
+
+# System files
+.DS_Store
+Thumbs.db

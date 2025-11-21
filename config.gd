@@ -26,6 +26,13 @@ var arguments := {}:
 				# format --flag (bool)
 				else:
 					parsed_args[key] = true
+			else:
+				# Fallback for arguments without -- (format: key=value)
+				if "=" in arg:
+					var kv = arg.split("=")
+					var key = kv[0]
+					var value = _convert_value(kv[1])
+					_add_argument(parsed_args, key, value)
 
 		# fallback environment
 		if not parsed_args.has("environment"):

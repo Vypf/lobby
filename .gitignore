@@ -17,3 +17,7 @@ mono_crash.*.json
 /android/
 executables/**/*
 logs
+
+# Claude Code
+.claude
+CLAUDE.md
