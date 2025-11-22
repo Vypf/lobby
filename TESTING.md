@@ -1,6 +1,35 @@
 # Test local - Lobby & Spawner API
 
-## Setup
+## Démarrage rapide avec Docker Compose
+
+### Développement
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+# Vérifier les logs
+docker compose logs -f
+```
+
+Accès : `ws://localhost/lobby` et `ws://localhost/CODE`
+
+### Production
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Accès : `wss://games.yvonnickfrin.dev/lobby` et `wss://games.yvonnickfrin.dev/CODE`
+
+### Arrêter
+
+```bash
+docker compose down
+```
+
+---
+
+## Setup manuel (sans Docker Compose)
 
 ### 1. Créer le fichier de configuration des images
 
@@ -28,7 +57,7 @@ docker build -t lobby-spawner -f Dockerfile.spawner .
 docker build -t lobby-router -f Dockerfile.router .
 ```
 
-## Lancer les services
+## Lancer les services manuellement
 
 ### Mode développement (accès direct aux ports)
 

@@ -1,0 +1,23 @@
+# Development override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  router:
+    ports:
+      - "80:80"
+
+  lobby-server:
+    ports:
+      - "17018:17018"
+    command:
+      - "environment=development"
+      - "spawner_api_url=http://spawner-api:8080"
+      - "lobby_url=ws://router/lobby"
+
+  spawner-api:
+    ports:
+      - "8080:8080"
+    command:
+      - "server_type=spawner"
+      - "environment=development"
+      - "images_file=/app/images.json"

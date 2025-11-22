@@ -54,4 +54,5 @@ ENTRYPOINT ["/usr/local/bin/godot", "--headless", "--path", "/app"]
 
 # Default arguments for spawner mode
 # NOTE: This container needs access to Docker socket via: -v /var/run/docker.sock:/var/run/docker.sock
-CMD ["server_type=spawner", "port=8080", "network_name=lobby-network"]
+# images.json is copied into /app/ during build
+CMD ["server_type=spawner", "port=8080", "network_name=lobby-network", "images_file=/app/images.json"]

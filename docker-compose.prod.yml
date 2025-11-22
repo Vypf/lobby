@@ -1,0 +1,23 @@
+# Production override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  router:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.ssl.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+  lobby-server:
+    command:
+      - "environment=production"
+      - "spawner_api_url=http://spawner-api:8080"
+      - "lobby_url=wss://games.yvonnickfrin.dev/lobby"
+
+  spawner-api:
+    command:
+      - "server_type=spawner"
+      - "environment=production"
+      - "images_file=/app/images.json"

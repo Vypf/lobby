@@ -1,0 +1,38 @@
+# Base docker-compose configuration
+# Use with docker-compose.dev.yml or docker-compose.prod.yml
+
+services:
+  router:
+    image: lobby-router
+    build:
+      context: .
+      dockerfile: Dockerfile.router
+    networks:
+      - lobby-network
+    restart: unless-stopped
+
+  lobby-server:
+    image: lobby-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - lobby-network
+    depends_on:
+      - spawner-api
+    restart: unless-stopped
+
+  spawner-api:
+    image: lobby-spawner
+    build:
+      context: .
+      dockerfile: Dockerfile.spawner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - lobby-network
+    restart: unless-stopped
+
+networks:
+  lobby-network:
+    name: lobby-network
