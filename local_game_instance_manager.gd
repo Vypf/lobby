@@ -1,22 +1,22 @@
 extends RefCounted
-class_name GameInstanceManager
+class_name LocalGameInstanceManager
 
 # Manages game instance lifecycle (spawn and delete)
-# This is the local implementation using OS.create_process()
+# Local implementation using OS.create_process() - for development only
 
 var _logger: CustomLogger
-var _environment: String
 var _paths: Dictionary
 var _executable_paths: Dictionary
 var _log_folder: String
+var _lobby_url: String
 
 
-func _init(environment: String = "development", paths: Dictionary = {}, executable_paths: Dictionary = {}, log_folder: String = ""):
-	_logger = CustomLogger.new("GameInstanceManager")
-	_environment = environment
+func _init(paths: Dictionary = {}, executable_paths: Dictionary = {}, log_folder: String = "", lobby_url: String = ""):
+	_logger = CustomLogger.new("LocalGameInstanceManager")
 	_paths = paths
 	_executable_paths = executable_paths
 	_log_folder = log_folder
+	_lobby_url = lobby_url
 
 
 func spawn(game: String, code: String, port: int) -> Dictionary:
@@ -24,20 +24,14 @@ func spawn(game: String, code: String, port: int) -> Dictionary:
 
 	var root := _get_root(game)
 	var log_path := _get_log_path(code)
-	var args := _get_args(code, port)
 	var executable_path := _get_executable_path(game)
 
+	var args := _get_args(code, port)
 	args = _add_log_path_to_args(log_path, args)
+	args = _add_root_to_args(root, args)
 
-	var pid: int
-
-	if _environment == "production":
-		_logger.debug("Production mode - Args: " + str(args), "spawn")
-		pid = OS.create_process(root, args)
-	else:
-		args = _add_root_to_args(root, args)
-		_logger.debug("Development mode - Executable: %s Args: %s" % [executable_path, str(args)], "spawn")
-		pid = OS.create_process(executable_path, args)
+	_logger.debug("Executable: %s Args: %s" % [executable_path, str(args)], "spawn")
+	var pid = OS.create_process(executable_path, args)
 
 	if pid == -1:
 		_logger.error("Failed to spawn instance", "spawn")
@@ -70,7 +64,7 @@ func delete(game: String, code: String) -> Dictionary:
 
 
 # ============================================================================
-# Private helper methods (extracted from LobbyServer)
+# Private helper methods
 # ============================================================================
 
 func _get_root(game: String) -> String:
@@ -101,12 +95,15 @@ func _get_log_path(code: String) -> String:
 
 
 func _get_args(code: String, port: int) -> PackedStringArray:
-	return PackedStringArray([
+	var args = PackedStringArray([
 		"server_type=room",
-		"environment=" + _environment,
+		"environment=development",
 		"code=" + code,
 		"port=" + str(port)
 	])
+	if not _lobby_url.is_empty():
+		args.append("lobby_url=" + _lobby_url)
+	return args
 
 
 func _add_log_path_to_args(log_path: String, args: PackedStringArray) -> PackedStringArray:

@@ -1,4 +1,5 @@
 extends Node
+class_name SpawnerAPI
 
 # Spawner API - Manages Docker containers for game instances
 # Exposes HTTP endpoints to spawn and remove game containers
@@ -11,6 +12,8 @@ var _logger: CustomLogger
 
 # Configuration from command line args
 var _network_name: String = "lobby-network"
+var _environment: String = "development"
+var _images: Dictionary = {}  # game -> {environment -> image} mapping
 
 
 func _init():
@@ -20,10 +23,18 @@ func _init():
 func _ready():
 	# Parse command line arguments
 	_network_name = Config.arguments.get("network_name", "lobby-network")
+	_environment = Config.arguments.get("environment", "development")
+	var images_file = Config.arguments.get("images_file", "")
 	var port = Config.arguments.get("port", DEFAULT_PORT)
 
+	# Load images configuration from JSON file
+	if not images_file.is_empty():
+		_images = _load_images_config(images_file)
+
 	_logger.info("Starting Spawner API on port " + str(port), "_ready")
+	_logger.info("Environment: " + _environment, "_ready")
 	_logger.info("Docker network: " + _network_name, "_ready")
+	_logger.info("Images config: " + str(_images.keys()), "_ready")
 
 	# Create and configure HTTP server
 	_server = HTTPHelpers.HTTPServer.new(port, _logger)
@@ -95,7 +106,8 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 	var params = payload.params
 
 	var container_name = game + "-" + code
-	_logger.info("Spawning container: " + container_name, "_spawn_container")
+	var port = str(params.get("port", ""))
+	_logger.info("Spawning container: " + container_name + " on port " + port, "_spawn_container")
 
 	# Build docker run command
 	var args = PackedStringArray([
@@ -105,13 +117,25 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 		"--network", _network_name
 	])
 
+	# Publish port to host (required for host clients to connect)
+	if not port.is_empty():
+		args.append("-p")
+		args.append(port + ":" + port)
+
 	# Convert params object to CMD arguments (key=value format)
+	_logger.debug("Params received: " + JSON.stringify(params), "_spawn_container")
 	var cmd_args = PackedStringArray()
 	for key in params.keys():
 		cmd_args.append(str(key) + "=" + str(params[key]))
+	_logger.info("CMD arguments: " + " ".join(cmd_args), "_spawn_container")
 
-	# Get image name (we expect it in params or use game name as image)
-	var image = params.get("image", "ghcr.io/vypf/" + game + ":latest")
+	# Get image name from config
+	var image = _get_image(game)
+	if image.is_empty():
+		return {
+			"success": false,
+			"error": "No image configured for game '%s' in environment '%s'" % [game, _environment]
+		}
 
 	# Add image name
 	args.append(image)
@@ -182,6 +206,38 @@ func _delete_container(payload: Dictionary) -> Dictionary:
 		"container_name": container_name,
 		"message": "Container deleted successfully"
 	}
+
+
+func _load_images_config(file_path: String) -> Dictionary:
+	if not FileAccess.file_exists(file_path):
+		_logger.error("Images config file not found: " + file_path, "_load_images_config")
+		return {}
+
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	var content = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	var error = json.parse(content)
+	if error != OK:
+		_logger.error("Failed to parse images config: " + json.get_error_message(), "_load_images_config")
+		return {}
+
+	_logger.info("Loaded images config from: " + file_path, "_load_images_config")
+	return json.data
+
+
+func _get_image(game: String) -> String:
+	if not _images.has(game):
+		_logger.warn("No image config for game: " + game, "_get_image")
+		return ""
+
+	var game_config = _images[game]
+	if not game_config.has(_environment):
+		_logger.warn("No image config for game '%s' in environment '%s'" % [game, _environment], "_get_image")
+		return ""
+
+	return game_config[_environment]
 
 
 func _exit_tree():
