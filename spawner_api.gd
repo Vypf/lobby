@@ -105,9 +105,11 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 	var code = payload.code
 	var params = payload.params
 
-	var container_name = game + "-" + code
-	var port = str(params.get("port", ""))
-	_logger.info("Spawning container: " + container_name + " on port " + port, "_spawn_container")
+	# Container naming: game-{code} for router compatibility
+	var container_name = "game-" + code
+	var external_port = str(params.get("external_port", ""))
+	var internal_port = str(params.get("port", "18000"))
+	_logger.info("Spawning container: " + container_name, "_spawn_container")
 
 	# Build docker run command
 	var args = PackedStringArray([
@@ -117,10 +119,12 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 		"--network", _network_name
 	])
 
-	# Publish port to host (required for host clients to connect)
-	if not port.is_empty():
+	# In development: expose port to host for direct access
+	# In production: no port exposure, traffic goes through router
+	if _environment == "development" and not external_port.is_empty():
 		args.append("-p")
-		args.append(port + ":" + port)
+		args.append(external_port + ":" + internal_port)
+		_logger.debug("Development mode: exposing port %s -> %s" % [external_port, internal_port], "_spawn_container")
 
 	# Convert params object to CMD arguments (key=value format)
 	_logger.debug("Params received: " + JSON.stringify(params), "_spawn_container")
@@ -142,9 +146,10 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 
 	# Add CMD arguments
 	for arg in cmd_args:
-		# Skip the "image" param as it's not a CMD argument
-		if not arg.begins_with("image="):
-			args.append(arg)
+		# Skip params that are not meant for the container
+		if arg.begins_with("image=") or arg.begins_with("external_port="):
+			continue
+		args.append(arg)
 
 	_logger.debug("Docker command: docker " + " ".join(args), "_spawn_container")
 
@@ -172,10 +177,10 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 
 
 func _delete_container(payload: Dictionary) -> Dictionary:
-	var game = payload.game
 	var code = payload.code
 
-	var container_name = game + "-" + code
+	# Container naming: game-{code} for router compatibility
+	var container_name = "game-" + code
 	_logger.info("Deleting container: " + container_name, "_delete_container")
 
 	# Stop the container first

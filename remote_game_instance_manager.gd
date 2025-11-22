@@ -7,17 +7,21 @@ class_name RemoteGameInstanceManager
 var _logger: CustomLogger
 var _spawner_api_url: String
 var _lobby_url: String
+var _environment: String
+
+const INTERNAL_PORT = 18000  # Fixed internal port for all game instances
 
 
-func _init(spawner_api_url: String, lobby_url: String):
+func _init(spawner_api_url: String, lobby_url: String, environment: String = "production"):
 	_logger = CustomLogger.new("RemoteGameInstanceManager")
 	_spawner_api_url = spawner_api_url
 	_lobby_url = lobby_url
+	_environment = environment
 
 
 func spawn(game: String, code: String, port: int) -> Dictionary:
-	_logger.info("Spawning remote instance: game=%s code=%s port=%d" % [game, code, port], "spawn")
-	_logger.debug("Using spawner_api_url=%s lobby_url=%s" % [_spawner_api_url, _lobby_url], "spawn")
+	_logger.info("Spawning remote instance: game=%s code=%s external_port=%d" % [game, code, port], "spawn")
+	_logger.debug("Using spawner_api_url=%s lobby_url=%s environment=%s" % [_spawner_api_url, _lobby_url, _environment], "spawn")
 
 	var url = _spawner_api_url + "/spawn"
 	var body = {
@@ -25,9 +29,10 @@ func spawn(game: String, code: String, port: int) -> Dictionary:
 		"code": code,
 		"params": {
 			"server_type": "room",
-			"environment": "production",
+			"environment": _environment,
 			"code": code,
-			"port": str(port),
+			"port": str(INTERNAL_PORT),  # Port the container listens on (fixed)
+			"external_port": str(port),  # For dev mode: host port mapping
 			"lobby_url": _lobby_url
 		}
 	}

@@ -20,8 +20,10 @@ func _start_lobby():
 	var logger = CustomLogger.new("Bootstrap")
 	var spawner_api_url = Config.arguments.get("spawner_api_url", "")
 	var lobby_url = Config.arguments.get("lobby_url", "")
+	var environment = Config.arguments.get("environment", "development")
 
 	logger.info("Starting lobby server", "_start_lobby")
+	logger.info("  environment: %s" % environment, "_start_lobby")
 	logger.info("  spawner_api_url: %s" % [spawner_api_url if not spawner_api_url.is_empty() else "(not set - using local)"], "_start_lobby")
 	logger.info("  lobby_url: %s" % [lobby_url if not lobby_url.is_empty() else "(not set)"], "_start_lobby")
 
@@ -29,7 +31,7 @@ func _start_lobby():
 	var instance_manager
 	if not spawner_api_url.is_empty():
 		logger.info("Using RemoteGameInstanceManager", "_start_lobby")
-		instance_manager = RemoteGameInstanceManager.new(spawner_api_url, lobby_url)
+		instance_manager = RemoteGameInstanceManager.new(spawner_api_url, lobby_url, environment)
 	else:
 		var paths = Config.arguments.get("paths", {})
 		var executable_paths = Config.arguments.get("executable_paths", {})
