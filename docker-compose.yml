@@ -11,18 +11,18 @@ services:
       - lobby-network
     restart: unless-stopped
 
-  lobby-server:
-    image: lobby-server
+  hub:
+    image: lobby-hub
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.lobby
     networks:
       - lobby-network
     depends_on:
-      - spawner-api
+      - spawner
     restart: unless-stopped
 
-  spawner-api:
+  spawner:
     image: lobby-spawner
     build:
       context: .

@@ -52,7 +52,7 @@ docker network create lobby-network
 ### 3. Build les images
 
 ```bash
-docker build -t lobby-server -f Dockerfile .
+docker build -t lobby-server -f Dockerfile.lobby .
 docker build -t lobby-spawner -f Dockerfile.spawner .
 docker build -t lobby-router -f Dockerfile.router .
 ```

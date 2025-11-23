@@ -6,15 +6,15 @@ services:
     ports:
       - "80:80"
 
-  lobby-server:
+  hub:
     ports:
       - "17018:17018"
     command:
       - "environment=development"
-      - "spawner_api_url=http://spawner-api:8080"
+      - "spawner_api_url=http://spawner:8080"
       - "lobby_url=ws://router/lobby"
 
-  spawner-api:
+  spawner:
     ports:
       - "8080:8080"
     command:
