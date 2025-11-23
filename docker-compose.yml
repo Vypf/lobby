@@ -15,7 +15,7 @@ services:
     image: lobby-hub
     build:
       context: .
-      dockerfile: Dockerfile.lobby
+      dockerfile: Dockerfile.hub
     networks:
       - lobby-network
     depends_on:

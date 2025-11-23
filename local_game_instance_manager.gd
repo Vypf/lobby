@@ -23,6 +23,14 @@ func spawn(game: String, code: String, port: int) -> Dictionary:
 	_logger.info("Spawning instance: game=%s code=%s port=%d" % [game, code, port], "spawn")
 
 	var root := _get_root(game)
+	if root.is_empty():
+		var error_msg = "No path configured for game '%s'. Add it with: paths %s=/path/to/project" % [game, game]
+		_logger.error(error_msg, "spawn")
+		return {
+			"success": false,
+			"error": error_msg
+		}
+
 	var log_path := _get_log_path(code)
 	var executable_path := _get_executable_path(game)
 
@@ -68,11 +76,9 @@ func delete(game: String, code: String) -> Dictionary:
 # ============================================================================
 
 func _get_root(game: String) -> String:
-	return (
-		_paths[game]
-		if not _paths.is_empty() and _paths.has(game)
-		else ProjectSettings.globalize_path("res://")
-	)
+	if _paths.is_empty() or not _paths.has(game):
+		return ""
+	return _paths[game]
 
 
 func _get_executable_path(game: String) -> String:

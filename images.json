@@ -1,0 +1,6 @@
+{
+  "space-chicken": {
+	"development": "space-chicken:test",
+	"production": "ghcr.io/vypf/space-chicken:latest"
+  }
+}

@@ -5,6 +5,7 @@ class_name SpawnerAPI
 # Exposes HTTP endpoints to spawn and remove game containers
 
 const DEFAULT_PORT = 8080
+const INTERNAL_PORT = 18000  # Fixed internal port for all game instances
 const HTTPHelpers = preload("res://http_helpers.gd")
 
 var _server: HTTPHelpers.HTTPServer
@@ -66,8 +67,8 @@ func _handle_spawn(request: HTTPHelpers.Request) -> HTTPHelpers.Response:
 	_logger.debug("Spawn payload: " + JSON.stringify(payload), "_handle_spawn")
 
 	# Validate required fields
-	if not payload.has("game") or not payload.has("code") or not payload.has("params"):
-		return HTTPHelpers.Response.error(400, "Missing required fields: game, code, params")
+	if not payload.has("game") or not payload.has("code"):
+		return HTTPHelpers.Response.error(400, "Missing required fields: game, code")
 
 	# Spawn the container
 	var result = _spawn_container(payload)
@@ -103,12 +104,11 @@ func _handle_delete(request: HTTPHelpers.Request) -> HTTPHelpers.Response:
 func _spawn_container(payload: Dictionary) -> Dictionary:
 	var game = payload.game
 	var code = payload.code
-	var params = payload.params
+	var params = payload.get("params", {})
 
 	# Container naming: game-{code} for router compatibility
 	var container_name = "game-" + code
 	var external_port = str(params.get("external_port", ""))
-	var internal_port = str(params.get("port", "18000"))
 	_logger.info("Spawning container: " + container_name, "_spawn_container")
 
 	# Build docker run command
@@ -123,14 +123,24 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 	# In production: no port exposure, traffic goes through router
 	if _environment == "development" and not external_port.is_empty():
 		args.append("-p")
-		args.append(external_port + ":" + internal_port)
-		_logger.debug("Development mode: exposing port %s -> %s" % [external_port, internal_port], "_spawn_container")
+		args.append(external_port + ":" + str(INTERNAL_PORT))
+		_logger.debug("Development mode: exposing port %s -> %s" % [external_port, INTERNAL_PORT], "_spawn_container")
 
-	# Convert params object to CMD arguments (key=value format)
-	_logger.debug("Params received: " + JSON.stringify(params), "_spawn_container")
+	# Build CMD arguments: auto-add derived fields + user params
 	var cmd_args = PackedStringArray()
+
+	# Auto-derived fields (always added by spawner)
+	cmd_args.append("server_type=room")
+	cmd_args.append("code=" + code)
+	cmd_args.append("port=" + str(INTERNAL_PORT))
+	cmd_args.append("environment=" + _environment)
+
+	# User-provided params (skip fields that are auto-derived or internal)
+	var skip_fields = ["external_port", "server_type", "code", "port", "environment"]
 	for key in params.keys():
-		cmd_args.append(str(key) + "=" + str(params[key]))
+		if key not in skip_fields:
+			cmd_args.append(str(key) + "=" + str(params[key]))
+
 	_logger.info("CMD arguments: " + " ".join(cmd_args), "_spawn_container")
 
 	# Get image name from config
@@ -145,11 +155,7 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 	args.append(image)
 
 	# Add CMD arguments
-	for arg in cmd_args:
-		# Skip params that are not meant for the container
-		if arg.begins_with("image=") or arg.begins_with("external_port="):
-			continue
-		args.append(arg)
+	args.append_array(cmd_args)
 
 	_logger.debug("Docker command: docker " + " ".join(args), "_spawn_container")
 

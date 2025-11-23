@@ -24,14 +24,11 @@ func spawn(game: String, code: String, port: int) -> Dictionary:
 	_logger.debug("Using spawner_api_url=%s lobby_url=%s environment=%s" % [_spawner_api_url, _lobby_url, _environment], "spawn")
 
 	var url = _spawner_api_url + "/spawn"
+	# Simplified payload: spawner auto-adds server_type, code, port, environment
 	var body = {
 		"game": game,
 		"code": code,
 		"params": {
-			"server_type": "room",
-			"environment": _environment,
-			"code": code,
-			"port": str(INTERNAL_PORT),  # Port the container listens on (fixed)
 			"external_port": str(port),  # For dev mode: host port mapping
 			"lobby_url": _lobby_url
 		}
