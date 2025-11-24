@@ -111,6 +111,17 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 	var external_port = str(params.get("external_port", ""))
 	_logger.info("Spawning container: " + container_name, "_spawn_container")
 
+	# Get image name from config (needed for pull)
+	var image = _get_image(game)
+	if image.is_empty():
+		return {
+			"success": false,
+			"error": "No image configured for game '%s' in environment '%s'" % [game, _environment]
+		}
+
+	# Pull latest image before spawning
+	_pull_image(image)
+
 	# Build docker run command
 	var args = PackedStringArray([
 		"run",
@@ -143,14 +154,6 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 
 	_logger.info("CMD arguments: " + " ".join(cmd_args), "_spawn_container")
 
-	# Get image name from config
-	var image = _get_image(game)
-	if image.is_empty():
-		return {
-			"success": false,
-			"error": "No image configured for game '%s' in environment '%s'" % [game, _environment]
-		}
-
 	# Add image name
 	args.append(image)
 
@@ -180,6 +183,18 @@ func _spawn_container(payload: Dictionary) -> Dictionary:
 		"container_id": container_id,
 		"message": "Container spawned successfully"
 	}
+
+
+func _pull_image(image: String) -> void:
+	_logger.info("Pulling latest image: " + image, "_pull_image")
+
+	var output = []
+	var exit_code = OS.execute("docker", PackedStringArray(["pull", image]), output, true)
+
+	if exit_code != 0:
+		_logger.warn("Failed to pull image (will use cached version): " + " ".join(output), "_pull_image")
+	else:
+		_logger.info("Image pulled successfully: " + image, "_pull_image")
 
 
 func _delete_container(payload: Dictionary) -> Dictionary:
