@@ -3,19 +3,13 @@
 
 services:
   router:
-    image: lobby-router
-    build:
-      context: .
-      dockerfile: Dockerfile.router
+    image: ghcr.io/vypf/lobby-router:latest
     networks:
       - lobby-network
     restart: unless-stopped
 
   hub:
-    image: lobby-hub
-    build:
-      context: .
-      dockerfile: Dockerfile.hub
+    image: ghcr.io/vypf/lobby:latest
     networks:
       - lobby-network
     depends_on:
@@ -23,12 +17,10 @@ services:
     restart: unless-stopped
 
   spawner:
-    image: lobby-spawner
-    build:
-      context: .
-      dockerfile: Dockerfile.spawner
+    image: ghcr.io/vypf/lobby-spawner:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./images.json:/app/images.json:ro
     networks:
       - lobby-network
     restart: unless-stopped

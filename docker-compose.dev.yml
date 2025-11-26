@@ -1,12 +1,20 @@
 # Development override
-# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 services:
   router:
+    image: lobby-router
+    build:
+      context: .
+      dockerfile: Dockerfile.router
     ports:
       - "80:80"
 
   hub:
+    image: lobby-hub
+    build:
+      context: .
+      dockerfile: Dockerfile.hub
     ports:
       - "17018:17018"
     command:
@@ -15,6 +23,13 @@ services:
       - "lobby_url=ws://router/lobby"
 
   spawner:
+    image: lobby-spawner
+    build:
+      context: .
+      dockerfile: Dockerfile.spawner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./images.json:/app/images.json:ro
     ports:
       - "8080:8080"
     command:
