@@ -42,9 +42,6 @@ COPY --chown=root:root . /app/
 # Remove directories that shouldn't be in the image
 RUN rm -rf /app/executables /app/logs /app/.git
 
-# Generate .godot/ cache (imports project and creates uid_cache)
-RUN godot --headless --import --quit || true
-
 # Create logs directory for runtime
 RUN mkdir -p /app/logs
 
