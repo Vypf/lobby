@@ -194,9 +194,9 @@ godot --headless -- \
 #### Fonctionnement
 
 1. Reçoit les connexions HTTPS/WSS sur le port 443
-2. Route `/lobby` vers le Hub
+2. Route `/lobby` vers le Hub (accessible aussi en HTTP pour le trafic Docker interne)
 3. Route `/{CODE}` (6 lettres majuscules) vers le conteneur `game-{CODE}`
-4. Gère les certificats Let's Encrypt
+4. Gère les certificats SSL (auto-signés ou Let's Encrypt)
 
 #### Règles de routage
 
@@ -211,7 +211,7 @@ godot --headless -- \
 | Fichier | Usage |
 |---------|-------|
 | `nginx/default.conf` | HTTP (développement) |
-| `nginx/default.ssl.conf` | HTTPS avec SSL (production) |
+| `nginx/default.ssl.conf.template` | Template HTTPS (production), `SERVER_NAME` substitué au démarrage |
 
 ---
 
@@ -225,9 +225,9 @@ La principale différence entre les deux configurations Docker Compose est le **
 |--------|-------------|------------|
 | **Protocole** | HTTP (`ws://`) | HTTPS (`wss://`) |
 | **Port Router** | 80 | 80 + 443 |
-| **Certificats SSL** | Non | Let's Encrypt |
+| **Certificats SSL** | Non | Auto-signés ou Let's Encrypt |
 | **Ports debug exposés** | hub:17018, spawner:8080 | Non |
-| **lobby_url** | `ws://router/lobby` | `wss://games.example.com/lobby` |
+| **lobby_url** | `ws://router/lobby` | `ws://router/lobby` (interne Docker) |
 
 ### Effet de la variable `environment`
 
@@ -347,20 +347,41 @@ godot --headless -- \
 
 > Sans `spawner_api_url`, le Hub utilise le mode local et spawne des processus Godot directement.
 
-### Option 3 : Production
+### Option 3 : Production locale (test SSL)
 
 ```bash
-# 1. Configurer SSL (Let's Encrypt)
-# Les certificats doivent être dans /etc/letsencrypt
+# 1. Générer des certificats auto-signés
+./scripts/generate-certs.sh localhost
 
 # 2. Lancer en production
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+SERVER_NAME=localhost docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+# 3. Vérifier (accepter le certificat auto-signé)
+curl -k https://localhost/
+```
+
+**URLs d'accès** :
+- Lobby : `wss://localhost/lobby`
+- Instances de jeu : `wss://localhost/{CODE}`
+
+> **Note** : Pour les clients Godot, désactiver la vérification SSL avec `verify_ssl=false` sur le `WebSocketClient` pour accepter les certificats auto-signés.
+
+### Option 4 : Production (serveur)
+
+```bash
+# 1. Lier les certificats Let's Encrypt
+mkdir -p certs/games.example.com
+ln -s /etc/letsencrypt/live/games.example.com/fullchain.pem certs/games.example.com/fullchain.pem
+ln -s /etc/letsencrypt/live/games.example.com/privkey.pem certs/games.example.com/privkey.pem
+
+# 2. Lancer en production
+SERVER_NAME=games.example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # 3. Vérifier
 curl https://games.example.com/
 ```
 
-**URLs d'accès (production)** :
+**URLs d'accès** :
 - Lobby : `wss://games.example.com/lobby`
 - Instances de jeu : `wss://games.example.com/{CODE}`
 
@@ -459,8 +480,14 @@ lobby/
 ├── addons/godot_multiplayer/ # Addon (git submodule)
 │
 ├── nginx/
-│   ├── default.conf          # Config HTTP
-│   └── default.ssl.conf      # Config HTTPS
+│   ├── default.conf              # Config HTTP (dev)
+│   ├── default.ssl.conf.template # Template HTTPS (prod)
+│   └── docker-entrypoint.sh      # Script envsubst
+│
+├── scripts/
+│   └── generate-certs.sh     # Génération certificats auto-signés
+│
+├── certs/                    # Certificats SSL (gitignored)
 │
 ├── Dockerfile.hub
 ├── Dockerfile.spawner

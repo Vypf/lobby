@@ -1,20 +1,28 @@
 # Production override
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Usage: SERVER_NAME=example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Required environment variables:
+#   - SERVER_NAME: Domain name (e.g., localhost, games.example.com)
+#
+# Certificate setup:
+#   - Local: ./scripts/generate-certs.sh localhost
+#   - Production: Mount Let's Encrypt certs to ./certs/${SERVER_NAME}/
 
 services:
   router:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - SERVER_NAME=${SERVER_NAME}
     volumes:
-      - ./nginx/default.ssl.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certs/${SERVER_NAME}:/etc/ssl/certs/${SERVER_NAME}:ro
 
   hub:
     command:
       - "environment=production"
       - "spawner_api_url=http://spawner:8080"
-      - "lobby_url=wss://games.yvonnickfrin.dev/lobby"
+      - "lobby_url=ws://router/lobby"
 
   spawner:
     command:

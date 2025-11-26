@@ -1,9 +1,16 @@
 FROM nginx:alpine
 
-# Copy nginx configuration (HTTP-only for development)
-# For production with SSL, mount the SSL config:
-#   -v $(pwd)/nginx/default.ssl.conf:/etc/nginx/conf.d/default.conf
-#   -v /etc/letsencrypt:/etc/letsencrypt:ro
+# Copy nginx configurations
+# - default.conf: HTTP-only for development
+# - default.ssl.conf.template: HTTPS template for production (processed by envsubst)
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY nginx/default.ssl.conf.template /etc/nginx/templates/default.ssl.conf.template
+
+# Script to process template and start nginx
+COPY nginx/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 80 443
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
