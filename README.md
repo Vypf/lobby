@@ -31,7 +31,7 @@ Système de lobby multijoueur pour Godot 4.5 qui permet de créer dynamiquement 
 │                                                                             │
 │    ┌──────────┐         Nginx reverse proxy                                 │
 │    │  Router  │         - /lobby     → hub:17018                            │
-│    │  :80/443 │         - /{CODE}    → game-{CODE}:18000                    │
+│    │   :80    │         - /{CODE}    → game-{CODE}:18000                    │
 │    └────┬─────┘                                                             │
 │         │                                                                   │
 │    ┌────┴────────────────────┐                                              │
@@ -189,14 +189,15 @@ godot --headless -- \
 
 ### 3. Router
 
-**Rôle** : Reverse proxy Nginx qui route le trafic WebSocket et gère la terminaison SSL.
+**Rôle** : Reverse proxy Nginx interne qui route le trafic WebSocket entre les conteneurs Docker.
 
 #### Fonctionnement
 
-1. Reçoit les connexions HTTPS/WSS sur le port 443
-2. Route `/lobby` vers le Hub (accessible aussi en HTTP pour le trafic Docker interne)
+1. Reçoit les connexions HTTP des conteneurs Docker
+2. Route `/lobby` vers le Hub
 3. Route `/{CODE}` (6 lettres majuscules) vers le conteneur `game-{CODE}`
-4. Gère les certificats SSL (auto-signés ou Let's Encrypt)
+
+> **Note** : Le router fonctionne uniquement en HTTP. La terminaison SSL doit être gérée par un reverse proxy externe (nginx sur l'hôte, load balancer, etc.).
 
 #### Règles de routage
 
@@ -206,26 +207,17 @@ godot --headless -- \
 | `/{CODE}` | `game-{CODE}:18000` | Connexion à une instance de jeu |
 | `/` | 200 OK | Health check |
 
-#### Fichiers de configuration
-
-| Fichier | Usage |
-|---------|-------|
-| `nginx/default.conf` | HTTP (développement) |
-| `nginx/default.ssl.conf.template` | Template HTTPS (production), `SERVER_NAME` substitué au démarrage |
-
 ---
 
 ## Environnements
 
 ### Docker Compose : dev vs prod
 
-La principale différence entre les deux configurations Docker Compose est le **protocole de communication** :
+La principale différence entre les deux configurations Docker Compose concerne l'exposition des ports :
 
 | Aspect | Development | Production |
 |--------|-------------|------------|
-| **Protocole** | HTTP (`ws://`) | HTTPS (`wss://`) |
-| **Port Router** | 80 | 80 + 443 |
-| **Certificats SSL** | Non | Auto-signés ou Let's Encrypt |
+| **Port Router** | 80 | 17080 (reverse proxy externe requis) |
 | **Ports debug exposés** | hub:17018, spawner:8080 | Non |
 | **lobby_url** | `ws://router/lobby` | `ws://router/lobby` (interne Docker) |
 
@@ -347,35 +339,16 @@ godot --headless -- \
 
 > Sans `spawner_api_url`, le Hub utilise le mode local et spawne des processus Godot directement.
 
-### Option 3 : Production locale (test SSL)
+### Option 3 : Production (serveur)
+
+En production, le router expose HTTP sur le port 17080. Vous devez configurer un reverse proxy externe (nginx sur l'hôte) pour gérer SSL et router le trafic.
 
 ```bash
-# 1. Générer des certificats auto-signés
-./scripts/generate-certs.sh localhost
+# 1. Lancer les conteneurs
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
-# 2. Lancer en production
-SERVER_NAME=localhost docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-
-# 3. Vérifier (accepter le certificat auto-signé)
-curl -k https://localhost/
-```
-
-**URLs d'accès** :
-- Lobby : `wss://localhost/lobby`
-- Instances de jeu : `wss://localhost/{CODE}`
-
-> **Note** : Pour les clients Godot, désactiver la vérification SSL avec `verify_ssl=false` sur le `WebSocketClient` pour accepter les certificats auto-signés.
-
-### Option 4 : Production (serveur)
-
-```bash
-# 1. Lier les certificats Let's Encrypt
-mkdir -p certs/games.example.com
-ln -s /etc/letsencrypt/live/games.example.com/fullchain.pem certs/games.example.com/fullchain.pem
-ln -s /etc/letsencrypt/live/games.example.com/privkey.pem certs/games.example.com/privkey.pem
-
-# 2. Lancer en production
-SERVER_NAME=games.example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# 2. Configurer nginx sur l'hôte pour proxy vers localhost:17080
+# Voir docs/INSTALLATION.md pour les détails
 
 # 3. Vérifier
 curl https://games.example.com/
@@ -411,8 +384,8 @@ key=value
 ```json
 {
   "nouveau-jeu": {
-    "development": "nouveau-jeu:dev",
-    "production": "ghcr.io/org/nouveau-jeu:latest"
+	"development": "nouveau-jeu:dev",
+	"production": "ghcr.io/org/nouveau-jeu:latest"
   }
 }
 ```
@@ -457,6 +430,7 @@ Le workflow `.github/workflows/docker-publish.yml` se déclenche sur :
 
 ## Documentation complémentaire
 
+- [docs/INSTALLATION.md](./docs/INSTALLATION.md) - Guide d'installation sur VPS Debian (production)
 - [docs/SPAWNER_API.md](./docs/SPAWNER_API.md) - Référence détaillée des endpoints
 - [docs/TESTING.md](./docs/TESTING.md) - Commandes Docker manuelles pour debug
 
@@ -474,20 +448,18 @@ lobby/
 ├── images.json               # Configuration des images Docker
 │
 ├── docs/
+│   ├── INSTALLATION.md       # Guide d'installation VPS Debian
 │   ├── SPAWNER_API.md        # Référence API détaillée
 │   └── TESTING.md            # Commandes de test manuelles
 │
 ├── addons/godot_multiplayer/ # Addon (git submodule)
 │
 ├── nginx/
-│   ├── default.conf              # Config HTTP (dev)
-│   ├── default.ssl.conf.template # Template HTTPS (prod)
-│   └── docker-entrypoint.sh      # Script envsubst
+│   └── default.conf          # Config HTTP (routage interne)
 │
-├── scripts/
-│   └── generate-certs.sh     # Génération certificats auto-signés
-│
-├── certs/                    # Certificats SSL (gitignored)
+├── .godot/
+│   ├── uid_cache.bin                 # Cache UIDs (versionné pour Docker)
+│   └── global_script_class_cache.cfg # Cache classes globales (versionné pour Docker)
 │
 ├── Dockerfile.hub
 ├── Dockerfile.spawner
