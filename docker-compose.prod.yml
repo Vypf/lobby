@@ -1,22 +1,13 @@
 # Production override
-# Usage: SERVER_NAME=example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Required environment variables:
-#   - SERVER_NAME: Domain name (e.g., localhost, games.example.com)
-#
-# Certificate setup:
-#   - Local: ./scripts/generate-certs.sh localhost
-#   - Production: Mount Let's Encrypt certs to ./certs/${SERVER_NAME}/
+# The router exposes HTTP on port 17080. Configure your reverse proxy
+# (nginx, Traefik, etc.) to handle SSL and forward traffic to this port.
 
 services:
   router:
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      - SERVER_NAME=${SERVER_NAME}
-    volumes:
-      - ./certs/${SERVER_NAME}:/etc/ssl/certs/${SERVER_NAME}:ro
+      - "17080:80"
 
   hub:
     command:

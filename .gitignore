@@ -18,9 +18,6 @@ mono_crash.*.json
 executables/**/*
 logs
 
-# SSL certificates (generated locally)
-certs/
-
 # Claude Code
 .claude
 CLAUDE.md

@@ -1,16 +1,8 @@
 FROM nginx:alpine
 
-# Copy nginx configurations
-# - default.conf: HTTP-only for development
-# - default.ssl.conf.template: HTTPS template for production (processed by envsubst)
+# Copy nginx configuration (HTTP only - SSL handled externally)
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY nginx/default.ssl.conf.template /etc/nginx/templates/default.ssl.conf.template
 
-# Script to process template and start nginx
-COPY nginx/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+EXPOSE 80
 
-EXPOSE 80 443
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
