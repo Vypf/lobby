@@ -22,11 +22,11 @@ Système de lobby multijoueur pour Godot 4.5 qui permet de créer dynamiquement 
 ## Architecture
 
 ```
-                                    ┌───────────┐
-                                    │  Clients  │
-                                    └─────┬─────┘
-                                          │ WebSocket
-                                          ▼
+									┌───────────┐
+									│  Clients  │
+									└─────┬─────┘
+										  │ WebSocket
+										  ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
 │    ┌──────────┐         Nginx reverse proxy                                 │
@@ -87,7 +87,7 @@ Tous les messages sont au format JSON : `{"type": string, "data": any}`
 | Client → Server | `create_lobby` | `{game: string}` | Demande de création d'un lobby |
 | Client → Server | `register_lobby` | `lobby_info` | Instance de jeu s'enregistrant |
 | Client → Server | `register_client` | `{game: string}` | Client s'enregistrant pour un jeu |
-| Server → Client | `lobby_created` | `string` (code) | Code du lobby créé |
+| Server → Client | `lobby_created` | `LobbyInfo` | Infos du lobby créé (`{code, port, game}`) |
 | Server → Client | `lobbies_updated` | `Dictionary` | Liste des lobbies pour ce jeu |
 | Server → Client | `lobby_connected` | `{peer_id, lobby_info}` | Nouveau lobby enregistré |
 | Server → Client | `lobby_disconnected` | `int` (peer_id) | Lobby déconnecté |
@@ -169,8 +169,8 @@ godot --headless -- \
 ```json
 {
   "space-chicken": {
-    "development": "space-chicken:test",
-    "production": "ghcr.io/vypf/space-chicken:latest"
+	"development": "space-chicken:test",
+	"production": "ghcr.io/vypf/space-chicken:latest"
   }
 }
 ```
@@ -309,23 +309,20 @@ godot --headless -- \
 git clone --recursive https://github.com/Vypf/lobby.git
 cd lobby
 
-# 2. Créer le réseau Docker
-docker network create lobby-network
-
-# 3. Configurer les images de jeu
+# 2. Configurer les images de jeu
 cat > images.json << 'EOF'
 {
   "space-chicken": {
-    "development": "space-chicken:test",
-    "production": "ghcr.io/vypf/space-chicken:latest"
+	"development": "space-chicken:test",
+	"production": "ghcr.io/vypf/space-chicken:latest"
   }
 }
 EOF
 
-# 4. Lancer en développement
+# 3. Lancer en développement
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
-# 5. Vérifier les logs
+# 4. Vérifier les logs
 docker compose logs -f
 ```
 
