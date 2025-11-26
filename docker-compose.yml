@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
 
   hub:
-    image: ghcr.io/vypf/lobby:latest
+    image: ghcr.io/vypf/lobby-hub:latest
     networks:
       - lobby-network
     depends_on:

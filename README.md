@@ -414,7 +414,7 @@ Les images sont automatiquement construites et publiées sur GitHub Container Re
 
 | Image | Description |
 |-------|-------------|
-| `ghcr.io/vypf/lobby:latest` | Hub |
+| `ghcr.io/vypf/lobby-hub:latest` | Hub |
 | `ghcr.io/vypf/lobby-spawner:latest` | Spawner API |
 | `ghcr.io/vypf/lobby-router:latest` | Router |
 
